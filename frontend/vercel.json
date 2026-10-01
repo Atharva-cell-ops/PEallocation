@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/v1/:match*",
-      "destination": "https://BACKEND_URL_PLACEHOLDER/api/v1/:match*"
+      "destination": "https://pe-allocation-3.onrender.com/api/v1/:match*"
     },
     {
       "source": "/(.*)",
