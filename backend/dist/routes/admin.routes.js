@@ -1,0 +1,15 @@
+import { Router } from 'express';
+import { getCycles, createCycle, addOfferingToCycle, openCycle, closeCycle, triggerAllocation, publishCycleResults, getCycleAllocations, exportAllocationsCsv, importStudents, getAuditLogs, } from '../controllers/admin.controller.js';
+const router = Router();
+router.get('/cycles', getCycles);
+router.post('/cycles', createCycle);
+router.post('/cycles/:cycleId/offerings', addOfferingToCycle);
+router.post('/cycles/:cycleId/open', openCycle);
+router.post('/cycles/:cycleId/close', closeCycle);
+router.post('/cycles/:cycleId/allocate', triggerAllocation);
+router.post('/cycles/:cycleId/publish', publishCycleResults);
+router.get('/cycles/:cycleId/allocations', getCycleAllocations);
+router.get('/cycles/:cycleId/export.csv', exportAllocationsCsv);
+router.post('/students/import', importStudents);
+router.get('/audit-logs', getAuditLogs);
+export default router;

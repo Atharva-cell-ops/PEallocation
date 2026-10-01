@@ -88,7 +88,7 @@ export const createCycle = async (req: Request, res: Response, next: NextFunctio
 
 export const addOfferingToCycle = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { cycleId } = req.params;
+    const cycleId = req.params.cycleId as string;
     const data = addOfferingSchema.parse(req.body);
     const adminId = req.user!.id;
 
@@ -129,7 +129,7 @@ export const addOfferingToCycle = async (req: Request, res: Response, next: Next
 
 export const openCycle = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { cycleId } = req.params;
+    const cycleId = req.params.cycleId as string;
     const adminId = req.user!.id;
 
     const cycle = await prisma.allocationCycle.findUnique({
@@ -171,7 +171,7 @@ export const openCycle = async (req: Request, res: Response, next: NextFunction)
 
 export const closeCycle = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { cycleId } = req.params;
+    const cycleId = req.params.cycleId as string;
     const adminId = req.user!.id;
 
     const cycle = await prisma.allocationCycle.findUnique({ where: { id: cycleId } });
@@ -206,7 +206,7 @@ export const closeCycle = async (req: Request, res: Response, next: NextFunction
 
 export const triggerAllocation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { cycleId } = req.params;
+    const cycleId = req.params.cycleId as string;
     const adminId = req.user!.id;
 
     const result = await executeCycleAllocation(cycleId, adminId);
@@ -222,7 +222,7 @@ export const triggerAllocation = async (req: Request, res: Response, next: NextF
 
 export const publishCycleResults = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { cycleId } = req.params;
+    const cycleId = req.params.cycleId as string;
     const adminId = req.user!.id;
 
     const cycle = await prisma.allocationCycle.findUnique({ where: { id: cycleId } });
@@ -261,7 +261,7 @@ export const publishCycleResults = async (req: Request, res: Response, next: Nex
 
 export const getCycleAllocations = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { cycleId } = req.params;
+    const cycleId = req.params.cycleId as string;
 
     const cycle = await prisma.allocationCycle.findUnique({ where: { id: cycleId } });
     if (!cycle) throw new AppError('Cycle not found', 404);
@@ -335,7 +335,7 @@ export const getCycleAllocations = async (req: Request, res: Response, next: Nex
 
 export const exportAllocationsCsv = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { cycleId } = req.params;
+    const cycleId = req.params.cycleId as string;
 
     const allocations = await prisma.allocation.findMany({
       where: { cycleId },
@@ -437,10 +437,10 @@ export const importStudents = async (req: Request, res: Response, next: NextFunc
 
 export const getAuditLogs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { cycleId } = req.query;
+    const cycleId = typeof req.query.cycleId === 'string' ? req.query.cycleId : undefined;
 
     const logs = await prisma.auditLog.findMany({
-      where: cycleId ? { cycleId: String(cycleId) } : undefined,
+      where: cycleId ? { cycleId } : undefined,
       include: {
         user: { select: { email: true, role: true } },
       },
