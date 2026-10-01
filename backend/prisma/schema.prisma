@@ -1,0 +1,191 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum CycleStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  ALLOCATED
+  PUBLISHED
+}
+
+enum AllocationStatus {
+  ALLOCATED
+  UNALLOCATED
+}
+
+enum TieBreakerRule {
+  SUBMISSION_TIME
+  ROLL_NUMBER
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  role         Role       @default(STUDENT)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  student      Student?
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+model Student {
+  id           String       @id @default(uuid())
+  userId       String       @unique
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rollNumber   String       @unique
+  name         String
+  department   String
+  semester     Int
+  cgpa         Decimal      @db.Decimal(4, 2)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  preferences  Preference[]
+  allocations  Allocation[]
+
+  @@index([cgpa])
+  @@index([department, semester])
+  @@map("students")
+}
+
+model AllocationCycle {
+  id             String          @id @default(uuid())
+  name           String
+  academicYear   String
+  semester       Int
+  status         CycleStatus     @default(DRAFT)
+  startDate      DateTime?
+  endDate        DateTime?
+  tieBreakerRule TieBreakerRule  @default(SUBMISSION_TIME)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  offerings      CycleElective[]
+  preferences    Preference[]
+  allocationRuns AllocationRun[]
+  allocations    Allocation[]
+  auditLogs      AuditLog[]
+
+  @@map("allocation_cycles")
+}
+
+model Elective {
+  id          String          @id @default(uuid())
+  code        String          @unique
+  title       String
+  department  String
+  credits     Int             @default(3)
+  description String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  offerings   CycleElective[]
+
+  @@map("electives")
+}
+
+model CycleElective {
+  id          String          @id @default(uuid())
+  cycleId     String
+  cycle       AllocationCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  electiveId  String
+  elective    Elective        @relation(fields: [electiveId], references: [id], onDelete: Restrict)
+  maxCapacity Int
+  minCgpa     Decimal?        @db.Decimal(4, 2)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  preferences Preference[]
+  allocations Allocation[]
+
+  @@unique([cycleId, electiveId])
+  @@map("cycle_electives")
+}
+
+model Preference {
+  id              String        @id @default(uuid())
+  studentId       String
+  student         Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  cycleId         String
+  cycle           AllocationCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  cycleElectiveId String
+  cycleElective   CycleElective @relation(fields: [cycleElectiveId], references: [id], onDelete: Cascade)
+  rank            Int
+  submittedAt     DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([studentId, cycleId, rank])
+  @@unique([studentId, cycleElectiveId])
+  @@index([cycleId, studentId])
+  @@map("preferences")
+}
+
+model AllocationRun {
+  id                String          @id @default(uuid())
+  cycleId           String
+  cycle             AllocationCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  executedAt        DateTime        @default(now())
+  totalEligible     Int
+  totalAllocated    Int
+  totalUnallocated  Int
+  tieBreakerApplied TieBreakerRule
+  executionLog      String?         @db.Text
+
+  allocations       Allocation[]
+
+  @@map("allocation_runs")
+}
+
+model Allocation {
+  id                      String          @id @default(uuid())
+  runId                   String
+  allocationRun           AllocationRun   @relation(fields: [runId], references: [id], onDelete: Cascade)
+  cycleId                 String
+  cycle                   AllocationCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  studentId               String
+  student                 Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  cycleElectiveId         String?
+  cycleElective           CycleElective?  @relation(fields: [cycleElectiveId], references: [id], onDelete: SetNull)
+  status                  AllocationStatus
+  allocatedPreferenceRank Int?
+  unallocatedReason       String?
+  cgpaSnapshot            Decimal         @db.Decimal(4, 2)
+  createdAt               DateTime        @default(now())
+
+  @@unique([cycleId, studentId])
+  @@index([cycleId, cycleElectiveId])
+  @@map("allocations")
+}
+
+model AuditLog {
+  id          String           @id @default(uuid())
+  action      String
+  performedBy String
+  user        User             @relation(fields: [performedBy], references: [id], onDelete: Restrict)
+  cycleId     String?
+  cycle       AllocationCycle? @relation(fields: [cycleId], references: [id], onDelete: SetNull)
+  details     String?          @db.Text
+  ipAddress   String?
+  createdAt   DateTime         @default(now())
+
+  @@index([cycleId])
+  @@index([action])
+  @@map("audit_logs")
+}
